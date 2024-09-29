@@ -1,0 +1,220 @@
+---
+title: "HW4"
+author: "Kang Yuan"
+date: "2024-07-11"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Question 1
+
+\[
+H = X(X^TX)^{-1}X^T
+\]
+
+For simple linear regression with an intercept term, the design matrix \( X \) is:
+\[
+X = \begin{pmatrix} 
+1 & x_1 \\ 
+1 & x_2 \\ 
+\vdots & \vdots \\ 
+1 & x_n 
+\end{pmatrix}
+\]
+
+\[
+X^TX = \begin{pmatrix} 
+n & \sum_{i=1}^n x_i \\ 
+\sum_{i=1}^n x_i & \sum_{i=1}^n x_i^2 
+\end{pmatrix}
+\]
+
+\[
+\text{det}(X^TX) = n \sum_{i=1}^n x_i^2 - \left(\sum_{i=1}^n x_i\right)^2
+\]
+
+\[
+(X^TX)^{-1} = \frac{1}{n \sum_{i=1}^n x_i^2 - \left(\sum_{i=1}^n x_i\right)^2} \begin{pmatrix} 
+\sum_{i=1}^n x_i^2 & -\sum_{i=1}^n x_i \\ 
+-\sum_{i=1}^n x_i & n 
+\end{pmatrix}
+\]
+
+\[
+H = \begin{pmatrix} 
+1 & x_1 \\ 
+1 & x_2 \\ 
+\vdots & \vdots \\ 
+1 & x_n 
+\end{pmatrix} \frac{1}{n \sum_{i=1}^n x_i^2 - \left(\sum_{i=1}^n x_i\right)^2} \begin{pmatrix} 
+\sum_{i=1}^n x_i^2 & -\sum_{i=1}^n x_i \\ 
+-\sum_{i=1}^n x_i & n 
+\end{pmatrix} \begin{pmatrix} 
+1 & 1 & \cdots & 1 \\ 
+x_1 & x_2 & \cdots & x_n 
+\end{pmatrix}
+\]
+
+\[
+H = \begin{pmatrix} 
+1 & x_1 \\ 
+1 & x_2 \\ 
+\vdots & \vdots \\ 
+1 & x_n 
+\end{pmatrix} \begin{pmatrix} 
+\frac{\sum_{i=1}^n x_i^2 - x_1 \sum_{i=1}^n x_i}{n \sum_{i=1}^n x_i^2 - \left(\sum_{i=1}^n x_i\right)^2} & \cdots \\ 
+\vdots & \vdots 
+\end{pmatrix}
+\]
+
+The diagonal elements of the hat matrix \( H \) are given by:
+\[
+h_{ii} = \mathbf{x_i^T} (X^TX)^{-1} \mathbf{x_i}
+\]
+
+\[
+h_{ii} = \frac{1}{n} + \frac{(x_i - \bar{x})^2}{\sum_{k=1}^n (x_k - \bar{x})^2}
+\]
+
+Where:
+\[
+\bar{x} = \frac{1}{n} \sum_{i=1}^n x_i
+\]
+
+## Question 2
+#### 2.a
+```{r}
+data = read.table('hw4.txt')
+
+model <- lm(y ~ x8, data = data)
+summary(model)
+```
+
+#### 2.b
+```{r}
+residuals <- resid(model)
+qqnorm(residuals, main = "Normal Probability Plot of Residuals")
+qqline(residuals, col = "blue")
+```
+
+It seems to be a light-tailed normal distribution.
+
+#### 2.c
+```{r}
+anova_table <- anova(model)
+print(anova_table)
+```
+
+In this case, the p-value is much smaller than 0.05. Therefore, we reject the null hypothesis and conclude that the predictor x8 has a statistically significant effect on the response variable y.
+
+#### 2.d
+```{r}
+confint_slope <- confint(model, level = 0.95)["x8", ]
+print(confint_slope)
+```
+
+#### 2.e
+Approximately 54.47% of the total variability in games won is explained by the model using opponents' rushing yards as the predictor. This indicates that more than half of the variability in the number of games won by NFL teams in the 1976 season can be attributed to the amount of rushing yards gained by their opponents.
+
+#### 2.f
+```{r}
+x8_new <- 2000
+
+ci_mean <- predict(model, newdata = data.frame(x8 = x8_new), interval = "confidence", level = 0.95)
+print(ci_mean)
+
+pi <- predict(model, newdata = data.frame(x8 = x8_new), interval = "prediction", level = 0.95)
+print(pi)
+```
+
+#### 2.g
+```{r}
+predicted <- predict(model)
+residuals <- resid(model)
+
+plot(predicted, residuals,
+     xlab = "Predicted Response (y-hat)",
+     ylab = "Residuals (e)",
+     main = "Residuals vs Predicted Response Plot")
+abline(h = 0, col = "blue")  # Add a horizontal line at y = 0 for reference
+```
+
+The model seems to meet the assumption of homoscedasticity, as the residuals show a fairly constant spread around zero across the range of predicted responses.
+
+#### 2.h
+```{r}
+predicted_x8 <- predict(model)
+residuals_x8 <- resid(model)
+model_x8_x2 <- lm(y ~ x8 + x2, data = data)
+predicted_x8_x2 <- predict(model_x8_x2)
+residuals_x8_x2 <- resid(model_x8_x2)
+plot(data$x2, residuals_x8,
+     xlab = "Team Passing Yardage (x2)",
+     ylab = "Residuals (y - predicted_y_x8)",
+     main = "Residuals vs Team Passing Yardage Plot (Model with x8)")
+
+points(data$x2, residuals_x8_x2, col = "green")
+
+# Add legend
+legend("bottomright", legend = c("Model with x8", "Model with x8 and x2"),
+       col = c("black", "green"), pch = 1, xpd = TRUE)
+```
+
+Adding x2 to the model might improve its explanatory power as it leads to a more convergent distribution of residuals or reduces the systematic pattern seen in the original model with x8 alone.
+
+#### 2.i
+First we compute all the t-value of the complete model to understand the relationships between each predictor variable and the response variable y (games won). I proceed this process in python and output the series in the order of significance, which is: ['x2', 'x8', 'x9'].
+```{r}
+model3 <- lm(y ~ x1 + x7 + x8+ x2 + x3 + x4 + x5 + x9 + x6, data = data)
+summary(model3)
+```
+
+```{r}
+model2 <- lm(y ~ x8+ x2 + x9, data = data)
+predicted <- predict(model2)
+residuals <- resid(model2)
+partial_residuals_x2 <- residuals + data$x1 * coef(model2)['x2']
+partial_residuals_x8 <- residuals + data$x7 * coef(model2)['x8']
+partial_residuals_x9 <- residuals + data$x8 * coef(model2)['x9']
+
+plot(data$x2, partial_residuals_x2,
+     xlab = "Rushing Yards (x2)",
+     ylab = "Partial Residuals (y - predicted_y + x2 coefficient)",
+     main = "Residuals Plus Component Plot for x2")
+
+lines(smooth.spline(data$x2, partial_residuals_x2), col = "blue")
+
+abline(lm(partial_residuals_x2 ~ data$x2), col = "red")
+
+legend("topright", legend = c("Smooth Line", "Regression Line"),
+       col = c("blue", "red"), lty = 1, cex = 0.8)
+
+# Plot Residuals Plus Component Plot for x9
+plot(data$x7, partial_residuals_x9,
+     xlab = "Percent Rushing (x9)",
+     ylab = "Partial Residuals (y - predicted_y + x9 coefficient)",
+     main = "Residuals Plus Component Plot for x9")
+
+lines(smooth.spline(data$x9, partial_residuals_x9), col = "blue")
+abline(lm(partial_residuals_x9 ~ data$x9), col = "red")
+legend("topright", legend = c("Smooth Line", "Regression Line"),
+       col = c("blue", "red"), lty = 1, cex = 0.8)
+
+# Plot Residuals Plus Component Plot for x8
+plot(data$x8, partial_residuals_x8,
+     xlab = "Opponents' Rushing Yards (x8)",
+     ylab = "Partial Residuals (y - predicted_y + x8 coefficient)",
+     main = "Residuals Plus Component Plot for x8")
+
+lines(smooth.spline(data$x8, partial_residuals_x8), col = "blue")
+abline(lm(partial_residuals_x8 ~ data$x8), col = "red")
+legend("topright", legend = c("Smooth Line", "Regression Line"),
+       col = c("blue", "red"), lty = 1, cex = 0.8)
+summary(model2)
+```
+
+x2, x8 and x9 fit the line well, which means it is a good prediction;
+However, the t-value shows that x9 doesn't contribute much to the prediction.
